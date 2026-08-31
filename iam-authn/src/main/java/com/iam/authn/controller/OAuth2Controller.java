@@ -36,14 +36,19 @@ public class OAuth2Controller {
     public ResponseEntity<ApiResponse<Map<String, Object>>> token(
             @RequestParam("grant_type") String grantType,
             @RequestParam("client_id") String clientId,
-            @RequestParam("code") String code,
-            @RequestParam("redirect_uri") String redirectUri,
-            @RequestParam("code_verifier") String codeVerifier
+            @RequestParam(value = "client_secret", required = false) String clientSecret,
+            @RequestParam(value = "code", required = false) String code,
+            @RequestParam(value = "redirect_uri", required = false) String redirectUri,
+            @RequestParam(value = "code_verifier", required = false) String codeVerifier
     ){
-        if (!"authorization_code".equals(grantType)) {
-            return ResponseEntity.badRequest().body(ApiResponse.error("Unsupported grant_type", "UNSUPPORTED_GRANT_TYPE"));
+        if ("authorization_code".equals(grantType)) {
+            Map<String, Object> tokenResponse = oauth2Service.exchangeCodeForToken(code, clientId, redirectUri, codeVerifier);
+            return ResponseEntity.ok(ApiResponse.success(tokenResponse, "Token exchange successful"));
+        } else if ("client_credentials".equals(grantType)) {
+            Map<String, Object> tokenResponse = oauth2Service.issueClientCredentialsToken(clientId, clientSecret);
+            return ResponseEntity.ok(ApiResponse.success(tokenResponse, "Client credentials token issued successfully"));
         }
-        Map<String, Object> tokenResponse = oauth2Service.exchangeCodeForToken(code, clientId, redirectUri, codeVerifier);
-        return ResponseEntity.ok(ApiResponse.success(tokenResponse, "Token exchange successful"));
+
+        return ResponseEntity.badRequest().body(ApiResponse.error("Unsupported grant_type", "UNSUPPORTED_GRANT_TYPE"));
     }
 }
