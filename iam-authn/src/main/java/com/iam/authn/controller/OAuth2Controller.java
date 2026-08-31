@@ -1,0 +1,49 @@
+package com.iam.authn.controller;
+
+import com.iam.authn.service.OAuth2Service;
+import com.iam.common.dto.ApiResponse;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
+
+@RestController
+@RequestMapping("/oauth2")
+public class OAuth2Controller {
+    private final OAuth2Service oauth2Service;
+
+    public OAuth2Controller(OAuth2Service oAuth2Service) {
+        this.oauth2Service = oAuth2Service;
+    }
+
+    @GetMapping("/authorize")
+    public ResponseEntity<ApiResponse<String>> authorize(
+            @RequestParam("client_id") String clientId,
+            @RequestParam("redirect_uri") String redirectUri,
+            @RequestParam("response_type") String responseType,
+            @RequestParam("code_challenge") String codeChallenge,
+            @RequestParam(value = "code_challenge_method", defaultValue = "S256") String codeChallengeMethod,
+            @RequestParam("username") String username
+    ){
+        if(!"code".equals(responseType)){
+            return ResponseEntity.badRequest().body(ApiResponse.error("Unsupported response_type", "INVALID_RESPONSE_TYPE"));
+        }
+        String authCode = oauth2Service.generateAuthorizationCode(username, clientId, redirectUri, codeChallenge, codeChallengeMethod);
+        return ResponseEntity.ok(ApiResponse.success(authCode, "Authorization code generated successfully"));
+    }
+
+    @PostMapping("/token")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> token(
+            @RequestParam("grant_type") String grantType,
+            @RequestParam("client_id") String clientId,
+            @RequestParam("code") String code,
+            @RequestParam("redirect_uri") String redirectUri,
+            @RequestParam("code_verifier") String codeVerifier
+    ){
+        if (!"authorization_code".equals(grantType)) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Unsupported grant_type", "UNSUPPORTED_GRANT_TYPE"));
+        }
+        Map<String, Object> tokenResponse = oauth2Service.exchangeCodeForToken(code, clientId, redirectUri, codeVerifier);
+        return ResponseEntity.ok(ApiResponse.success(tokenResponse, "Token exchange successful"));
+    }
+}
