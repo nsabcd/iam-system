@@ -8,7 +8,7 @@ public class PkceUtil {
     public static boolean verifyCodeVerifier(String codeVerifier, String codeChallenge, String method){
         if("256".equalsIgnoreCase(method)){
             try{
-                MessageDigest digest = MessageDigest.getInstance("256");
+                MessageDigest digest = MessageDigest.getInstance("SHA-256");
                 byte[] hashedBytes = digest.digest(codeVerifier.getBytes(StandardCharsets.US_ASCII));
                 String encoded = Base64.getUrlEncoder().withoutPadding().encodeToString(hashedBytes);
                 return encoded.equals(codeChallenge);

@@ -41,8 +41,8 @@ public class RedisRateLimitingFilter implements Filter {
         Long currentCount = redisTemplate.opsForValue().increment(redisKey);
 
         if (currentCount != null && currentCount == 1L) {
-            // Set expiration window to 60 seconds on the first request
-            redisTemplate.expire(redisKey, Duration.ofSeconds(1));
+            // Increase window from 1 second to 60 seconds to avoid expiration mid-test loop
+            redisTemplate.expire(redisKey, Duration.ofSeconds(60));
         }
 
         return currentCount != null && currentCount > MAX_REQUESTS_PER_SECOND;
