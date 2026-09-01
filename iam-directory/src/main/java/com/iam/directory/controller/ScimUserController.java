@@ -62,4 +62,13 @@ public class ScimUserController {
                         ))).orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(Map.of("status", "404", "detail", "User not found")));
     }
+
+    @DeleteMapping("/Users/{id}")
+    public ResponseEntity<Void> deleteUser(@PathVariable("id") String id) {
+        // Perform user deletion logic using your directory/service layer
+        userRepository.deleteById(UUID.fromString(id));
+
+        // Return 204 No Content upon successful deletion
+        return ResponseEntity.noContent().build();
+    }
 }

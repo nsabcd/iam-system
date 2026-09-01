@@ -7,18 +7,19 @@ import com.nimbusds.jose.proc.JWSVerificationKeySelector;
 import com.nimbusds.jose.proc.SecurityContext;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.proc.DefaultJWTProcessor;
+import jakarta.servlet.*;
+import org.springframework.stereotype.Component;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.stereotype.Component;
-import jakarta.servlet.*;
 
 import java.io.IOException;
+import java.util.List;
 
 @Component
-public class ScimSecurityFilter implements Filter{
+public class RbacScopeValidationFilter implements Filter{
     private final KeyManagementService keyManagementService;
 
-    public ScimSecurityFilter(KeyManagementService keyManagementService) {
+    public RbacScopeValidationFilter(KeyManagementService keyManagementService) {
         this.keyManagementService = keyManagementService;
     }
 
@@ -27,43 +28,41 @@ public class ScimSecurityFilter implements Filter{
             throws IOException, ServletException{
         HttpServletRequest httpRequest = (HttpServletRequest) request;
         HttpServletResponse httpResponse = (HttpServletResponse) response;
-
         String path = httpRequest.getRequestURI();
-
-        // Target only SCIM provisioning routes
-        if(path.startsWith("/scim/v2")){
+        // Enforce RBAC/Scope requirements for API data endpoints
+        if (path.startsWith("/api/v1/secure")) {
             String authHeader = httpRequest.getHeader("Authorization");
-            if(authHeader==null || !authHeader.startsWith("Bearer ")){
-                writeUnauthorized(httpResponse, "Missing or invalid Authorization header");
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                writeForbidden(httpResponse, "Missing or invalid Authorization header");
                 return;
             }
             String token = authHeader.substring(7);
-            try{
-                // Validate token signature and expiration locally
-                var publicRsaKey = keyManagementService.getRsaKey().toPublicJWK();
-                var jwkSet = new ImmutableJWKSet<>(new JWKSet(publicRsaKey));
+            try {
+                var publicKey = keyManagementService.getRsaKey().toPublicJWK();
+                var jwkSet = new ImmutableJWKSet<>(new JWKSet(publicKey));
                 var jwtProcessor = new DefaultJWTProcessor<SecurityContext>();
                 jwtProcessor.setJWSKeySelector(new JWSVerificationKeySelector<>(com.nimbusds.jose.JWSAlgorithm.RS256, jwkSet));
                 JWTClaimsSet claims = jwtProcessor.process(token, null);
-                // Verify that this is an M2M token with administrative/provisioning privileges
-                String tokenType = (String) claims.getClaim("token_type");
+
+                // Example RBAC check: Ensure user or service has required role/scope
+                List<String> roles = (List<String>) claims.getClaim("roles");
                 String scopes = (String) claims.getClaim("scope");
-                if(!"m2m".equals(tokenType) || (scopes==null || !scopes.contains("admin"))){
-                    writeUnauthorized(httpResponse, "Insufficient privileges or invalid M2M token type");
+
+                if ((roles == null || !roles.contains("ROLE_ADMIN")) && (scopes == null || !scopes.contains("api:write"))) {
+                    writeForbidden(httpResponse, "Insufficient scope or role permissions");
                     return;
                 }
-
             } catch (Exception e) {
-                writeUnauthorized(httpResponse, "Token validation failed: " + e.getMessage());
+                writeForbidden(httpResponse, "Token validation failed: " + e.getMessage());
                 return;
             }
         }
         chain.doFilter(request, response);
 
     }
-    private void writeUnauthorized(HttpServletResponse response, String message) throws IOException{
-        response.setStatus(401);
+    private void writeForbidden(HttpServletResponse response, String message) throws IOException {
+        response.setStatus(403);
         response.setContentType("application/json");
-        response.getWriter().write("{\"success\":false,\"message\":\"" + message + "\",\"errorCode\":\"UNAUTHORIZED_SCIM_ACCESS\"}");
+        response.getWriter().write("{\"success\":false,\"message\":\"" + message + "\",\"errorCode\":\"FORBIDDEN_ACCESS\"}");
     }
 }

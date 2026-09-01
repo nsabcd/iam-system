@@ -12,7 +12,7 @@ public class RevokedTokenEntity {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false, unique = true, length = 2048)
     private String tokenSignature;
 
     private Instant revokedAt;

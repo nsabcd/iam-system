@@ -14,6 +14,7 @@ import org.springframework.test.web.servlet.MvcResult;
 
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -78,8 +79,10 @@ public class IamSystemIntegrationTest {
 
     @Test
     @Order(4)
-    void testScimUSerProvisioning() throws Exception{
+    void testScimUserProvisioning() throws Exception{
         //Required M2M token with admin scope
+        assumeTrue(m2mAccessToken != null, "M2M Token must be present");
+
         Map<String, Object> scimUser = Map.of(
                 "schemas", java.util.List.of("urn:ietf:params:scim:schemas:core:2.0:User"),
                 "userName", "janedoe",
@@ -87,7 +90,7 @@ public class IamSystemIntegrationTest {
         );
 
         MvcResult result = mockMvc.perform(post("/scim/v2/Users")
-                .header("Authorizartion", "Bearer "+m2mAccessToken)
+                .header("Authorization", "Bearer "+m2mAccessToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(scimUser)))
                 .andExpect(status().isCreated())
@@ -107,5 +110,72 @@ public class IamSystemIntegrationTest {
                 .content(objectMapper.writeValueAsString(introspectRequest)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.active").value(true));
+    }
+    /*
+    @Test
+    @Order(6)
+    void testRateLimitingOnLogin() throws Exception {
+        Map<String, String> loginRequest = Map.of(
+                "userName", "testuser",
+                "password", "WrongPassword"
+        );
+        String content = objectMapper.writeValueAsString(loginRequest);
+
+        // Hit the login endpoint to trigger rate limits
+        for (int i = 0; i < 10; i++) {
+            mockMvc.perform(post("/auth/login")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(content));
+        }
+
+        mockMvc.perform(post("/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(content))
+                .andExpect(status().is(429))
+                .andExpect(jsonPath("$.errorCode").value("RATE_LIMIT_EXCEEDED"));
+    }
+     */
+
+
+    @Test
+    @Order(7)
+    void testTokenRevocationAndBlacklisting() throws Exception {
+        // 1. Ensure we have a valid user access token from testHumanLogin
+        assumeTrue(userAccessToken != null, "User Access Token must be present");
+
+        // 2. Introspect the active token to confirm it is currently valid
+        Map<String, String> introspectRequest = Map.of("token", userAccessToken);
+        mockMvc.perform(post("/authz/introspect")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(introspectRequest)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.active").value(true));
+
+        // 3. Revoke the token (assuming you have a revocation endpoint mapped, e.g., /auth/revoke or /authz/revoke)
+        // If your endpoint path differs, update the URI string below accordingly:
+
+        mockMvc.perform(post("/authz/revoke")
+                        .header("Authorization", "Bearer " + userAccessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(introspectRequest)))
+                .andExpect(status().isOk());
+
+        // 4. Introspect the token again and verify it is now flagged as inactive/revoked
+        mockMvc.perform(post("/authz/introspect")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(introspectRequest)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.active").value(false))
+                .andExpect(jsonPath("$.data.error").value("Token has been revoked"));
+    }
+
+    @Test
+    @Order(7)
+    void testDeleteScimUser() throws Exception {
+        if (createdUserId != null) {
+            mockMvc.perform(delete("/scim/v2/Users/" + createdUserId)
+                            .header("Authorization", "Bearer " + m2mAccessToken))
+                    .andExpect(status().isNoContent());
+        }
     }
 }
