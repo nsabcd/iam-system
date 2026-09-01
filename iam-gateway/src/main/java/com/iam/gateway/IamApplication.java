@@ -30,6 +30,7 @@ public class IamApplication {
                 user.setUsername("testuser");
                 user.setEmail("testuser@iam.com");
                 user.setPasswordHash(encoder.encode("password123"));
+                user.setActive(true);
                 userRepository.save(user);
                 System.out.println(">> Seeded test user: testuser / password123");
             }
