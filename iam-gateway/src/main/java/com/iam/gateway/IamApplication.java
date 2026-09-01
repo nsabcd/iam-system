@@ -38,8 +38,8 @@ public class IamApplication {
                 ServicePrincipalEntity entity = new ServicePrincipalEntity();
                 entity.setClientId("test-service-client");
                 entity.setClientSecretHash(encoder.encode("secret123"));
-                entity.setServiceName("TestClientService");
-                entity.setAllowedScopes("payments:read payments:write");
+                entity.setServiceName("ProvisioningService");
+                entity.setAllowedScopes("payments:read payments:write admin:scim");
                 servicePrincipalRepository.save(entity);
                 System.out.println(">> Seeded test service principal: test-service-client / secret123");
             }
