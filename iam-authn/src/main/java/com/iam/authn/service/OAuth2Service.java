@@ -14,18 +14,17 @@ import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.JWSSigner;
 import com.nimbusds.jose.crypto.RSASSASigner;
-import com.nimbusds.jose.produce.JWSSignerFactory;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import jakarta.transaction.Transactional;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
-import java.sql.Ref;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
@@ -36,7 +35,7 @@ public class OAuth2Service {
     private final UserRepository userRepository;
     private final KeyManagementService keyManagementService;
     private final ServicePrincipalRepository servicePrincipalRepository;
-    private final BCryptPasswordEncoder bCryptPasswordEncoder = new BCryptPasswordEncoder();
+    private final PasswordEncoder passwordEncoder ;
     private final SecureRandom secureRandom = new SecureRandom();
     private final RefreshTokenRepository refreshTokenRepository;
     private static final long REFRESH_TOKEN_VALIDITY_DAYS = 365;
@@ -45,12 +44,14 @@ public class OAuth2Service {
                          UserRepository userRepository,
                          KeyManagementService keyManagementService,
                          ServicePrincipalRepository servicePrincipalRepository,
-                         RefreshTokenRepository refreshTokenRepository) {
+                         RefreshTokenRepository refreshTokenRepository,
+                         PasswordEncoder passwordEncoder) {
         this.codeRepository = codeRepository;
         this.userRepository = userRepository;
         this.keyManagementService = keyManagementService;
         this.servicePrincipalRepository = servicePrincipalRepository;
         this.refreshTokenRepository=refreshTokenRepository;
+        this.passwordEncoder=passwordEncoder;
     }
 
     public String generateAuthorizationCode(String username, String clientId, String redirectUri, String codeChallenge, String codeChallengeMethod){
@@ -134,7 +135,7 @@ public class OAuth2Service {
         ServicePrincipalEntity principal = servicePrincipalRepository.findByClientId(clientId)
                 .orElseThrow(() -> new IllegalArgumentException("Invalid client ID"));
 
-        if(!principal.isActive() || !bCryptPasswordEncoder.matches(clientSecret, principal.getClientSecretHash())){
+        if(!principal.isActive() || !passwordEncoder.matches(clientSecret, principal.getClientSecretHash())){
             throw new IllegalArgumentException("Invalid client credentials");
         }
 

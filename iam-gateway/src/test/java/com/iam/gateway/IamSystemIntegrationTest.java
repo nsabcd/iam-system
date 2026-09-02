@@ -66,7 +66,8 @@ public class IamSystemIntegrationTest {
         MvcResult result = mockMvc.perform(post("/oauth2/token")
                 .param("grant_type", "client_credentials")
                 .param("client_id", "test-service-client")
-                .param("client_secret", "secret123"))
+                .param("client_secret", "secret123")
+                .param("scope", "admin admin:scim"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.access_token").exists())
@@ -138,7 +139,7 @@ public class IamSystemIntegrationTest {
 
 
     @Test
-    @Order(7)
+    @Order(6)
     void testTokenRevocationAndBlacklisting() throws Exception {
         // 1. Ensure we have a valid user access token from testHumanLogin
         assumeTrue(userAccessToken != null, "User Access Token must be present");
