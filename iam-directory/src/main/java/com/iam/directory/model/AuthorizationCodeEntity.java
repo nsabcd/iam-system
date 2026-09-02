@@ -36,6 +36,12 @@ public class AuthorizationCodeEntity {
     @Column(nullable = false)
     private boolean used=false;
 
+    @Column
+    private String nonce;
+
+    @Column
+    private String scopes;
+
     // Getters and Setters
     public UUID getId() { return id; }
     public void setId(UUID id) { this.id = id; }
@@ -55,4 +61,9 @@ public class AuthorizationCodeEntity {
     public void setExpiresAt(Instant expiresAt) { this.expiresAt = expiresAt; }
     public boolean isUsed() { return used; }
     public void setUsed(boolean used) { this.used = used; }
+    public String getNonce() { return nonce; }
+    public void setNonce(String nonce) { this.nonce = nonce; }
+
+    public String getScopes() { return scopes; }
+    public void setScopes(String scopes) { this.scopes = scopes; }
 }

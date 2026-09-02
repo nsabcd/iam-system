@@ -39,7 +39,8 @@ public class OAuth2Controller {
             @RequestParam(value = "client_secret", required = false) String clientSecret,
             @RequestParam(value = "code", required = false) String code,
             @RequestParam(value = "redirect_uri", required = false) String redirectUri,
-            @RequestParam(value = "code_verifier", required = false) String codeVerifier
+            @RequestParam(value = "code_verifier", required = false) String codeVerifier,
+            @RequestParam(value = "refresh_token", required = false) String refreshToken
     ){
         if ("authorization_code".equals(grantType)) {
             Map<String, Object> tokenResponse = oauth2Service.exchangeCodeForToken(code, clientId, redirectUri, codeVerifier);
@@ -47,6 +48,9 @@ public class OAuth2Controller {
         } else if ("client_credentials".equals(grantType)) {
             Map<String, Object> tokenResponse = oauth2Service.issueClientCredentialsToken(clientId, clientSecret);
             return ResponseEntity.ok(ApiResponse.success(tokenResponse, "Client credentials token issued successfully"));
+        }else if ("refresh_token".equals(grantType)) {
+            Map<String, Object> tokenResponse = oauth2Service.rotateRefreshToken(refreshToken);
+            return ResponseEntity.ok(ApiResponse.success(tokenResponse, "Token refreshed successfully"));
         }
 
         return ResponseEntity.badRequest().body(ApiResponse.error("Unsupported grant_type", "UNSUPPORTED_GRANT_TYPE"));

@@ -10,6 +10,7 @@ import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -20,17 +21,18 @@ import java.util.Optional;
 public class AuthenticationService {
     private final UserRepository userRepository;
     private final KeyManagementService keyManagementService;
-    private final BCryptPasswordEncoder bCryptPasswordEncoder = new BCryptPasswordEncoder();
+    private final PasswordEncoder passwordEncoder;
 
-    public AuthenticationService(UserRepository userRepository, KeyManagementService keyManagementService){
+    public AuthenticationService(UserRepository userRepository, KeyManagementService keyManagementService, PasswordEncoder passwordEncoder){
         this.userRepository=userRepository;
         this.keyManagementService=keyManagementService;
+        this.passwordEncoder=passwordEncoder;
     }
 
     public String authenticateAndGenerateToken(String userName, String rawPassword){
         Optional<UserEntity> userOpt = userRepository.findByUsername(userName);
-        if(userOpt.isEmpty() || !bCryptPasswordEncoder.matches(rawPassword, userOpt.get().getPasswordHash())){
-            throw new IllegalArgumentException("Invalid username of password");
+        if(userOpt.isEmpty() || !passwordEncoder.matches(rawPassword, userOpt.get().getPasswordHash())){
+            throw new IllegalArgumentException("Invalid username or password");
         }
         UserEntity user = userOpt.get();
         try{
