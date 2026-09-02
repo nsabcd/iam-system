@@ -1,4 +1,4 @@
-package com.iam.security.service;
+package com.iam.directory.service;
 
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;

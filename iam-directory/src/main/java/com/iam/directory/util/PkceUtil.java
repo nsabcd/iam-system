@@ -1,4 +1,4 @@
-package com.iam.authn.util;
+package com.iam.directory.util;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;

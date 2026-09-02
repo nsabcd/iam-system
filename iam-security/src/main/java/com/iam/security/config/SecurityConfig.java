@@ -30,7 +30,7 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/.well-known/jwks.json",
                                 "/.well-known/openid-configuration",
-                                "/auth/login",
+                                "/auth/**",
                                 "/oauth2/token",
                                 "/authz/introspect",
                                 "/authz/revoke"
